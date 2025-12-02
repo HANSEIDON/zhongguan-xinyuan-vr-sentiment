@@ -15,22 +15,23 @@
 
 ### 环境搭建与运行
 
-#### 1. 前提条件
+- with `pip`, on `Windows`
 
-请确保您的系统已安装 **Python 3.8+** 和以下依赖库。
+> python-version >= 3.8
 
 ```bash
-pip install Flask ultralytics opencv-python requests
+cd ReviewSystem
+python -m venv .venv
+.venv/Scripts/python -m pip install -r requirements.txt
+.venv/Scripts/python test_yolo.py 
+.venv/Scripts/python app.py
+```
 
-#### 3. 运行步骤 (Execution Steps)
+- with `uv`, on `Windows`
 
-**步骤一：生成初始化数据 (运行 YOLO 坐标提取)**
-
-# 在项目根目录下执行（假设 test_yolo.py 放在根目录）
-python test_yolo.py 
-
-# (注意：执行此命令前，请确保 yolov8x.pt 文件已存在于根目录或 models/ 文件夹中。)
-
-**步骤二：启动 Flask 服务器**
-
-python app.py
+```bash
+cd ReviewSystem
+uv sync
+uv run test_yolo.py 
+uv run app.py
+```
