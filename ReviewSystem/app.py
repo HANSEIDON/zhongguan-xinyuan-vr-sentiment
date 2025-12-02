@@ -105,60 +105,45 @@ def panorama():
     return render_template("panorama.html")
 
 
-@app.route("/submit_review", methods=["POST"])
+@app.route('/submit_review', methods=['POST'])
 def submit_review():
-    full_review = request.form.get("review_content")
-    rating = int(request.form.get("rating"))
-    user_name = "用户" + datetime.now().strftime("%H%M")
+    full_review = request.form.get('review_content')
+    rating = int(request.form.get('rating'))
+    user_name = '用户' + datetime.now().strftime("%H%M")
 
-    # 1. 문장을 구분 기호(쉼표, 마침표, 공백 등)로 쪼갭니다.
-    # 정규표현식: 중국어 쉼표(，), 영어 쉼표(,), 마침표(。), 느낌표(!), 물음표(?), 공백(\s) 기준
-    segments = re.split(r"[，,。!！?？\n]+", full_review)
-
-    # 쪼개진 문장들을 하나씩 검사합니다.
-    # 예: segments = ["沙发太好了", "椅子不好", ""]
-
-    processed_count = 0
-
+    # 1. 문장 쪼개기
+    segments = re.split(r'[，,。!！?？\n]+', full_review)
+    
+    # 2. 쪼개진 조각들 분석해서 'sub_reviews' 리스트 만들기
+    sub_reviews = [] # 세부 내용 담을 바구니
+    
     for segment in segments:
-        segment = segment.strip()  # 앞뒤 공백 제거
-        if not segment:
-            continue  # 빈 문장이면 패스
+        segment = segment.strip()
+        if not segment: continue
 
-        # 이 조각이 어떤 물건에 대한 건지 확인
-        targets = detect_target_object(segment)
-
+        # 이 조각이 어떤 물건인지 확인
+        targets = detect_target_object(segment) # 리스트 반환 (예: ['couch'])
+        
         if targets:
-            # 타겟을 찾았다면, 해당 타겟별로 리뷰를 각각 저장
             for target in targets:
-                new_review = {
-                    "name": user_name,
-                    "rating": rating,
-                    "text": segment,  # 전체 문장이 아니라 '해당 조각'만 저장 (깔끔함)
-                    "target": target,
-                }
-                db_reviews.insert(0, new_review)
-                processed_count += 1
-        else:
-            # 타겟을 못 찾은 문장(일반 평가 등)은 그냥 저장할지, 버릴지 결정
-            # 여기서는 'general'이나 None으로 저장하거나,
-            # 만약 전체 문장에 타겟이 하나도 없었다면 통째로 하나 저장하는 로직을 추가할 수 있음.
-            pass
+                # 조각 정보를 담음 (예: 소파에 대한 칭찬)
+                sub_reviews.append({
+                    'target': target,
+                    'segment_text': segment
+                })
 
-    # 만약 문장을 다 뒤졌는데도 아무 물건도 못 찾았다면? (예: "전체적으로 좋아요")
-    # 그러면 전체 문장을 그냥 저장하고 target은 None (일반 리뷰)으로 둡니다.
-    if processed_count == 0:
-        new_review = {
-            "name": user_name,
-            "rating": rating,
-            "text": full_review,
-            "target": None,
-        }
-        db_reviews.insert(0, new_review)
+    # 3. DB에는 "하나의 리뷰"로 저장하되, 세부 정보를 안에 포함시킴
+    new_review = {
+        'name': user_name,
+        'rating': rating,
+        'text': full_review,   # 메인 화면용 전체 문장
+        'sub_reviews': sub_reviews # 파노라마용 세부 조각 리스트
+    }
+    
+    db_reviews.insert(0, new_review)
 
-    return redirect("/")
-
-
+    return redirect(url_for('index'))
+    
 @app.route("/api/reviews", methods=["GET"])
 def api_reviews():
     return jsonify(db_reviews)
@@ -166,3 +151,4 @@ def api_reviews():
 
 if __name__ == "__main__":
     app.run(debug=False, port=5000)
+
