@@ -205,3 +205,15 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# --- Custom ML/YOLO/Flask Files ---
+# 큰 YOLO 모델 파일 (Git에 올리지 않음)
+yolov8x.pt
+yolov8n.pt
+
+# YOLO 실행 결과 및 로그 파일
+runs/
+
+# Flask 세션 및 캐시 (서버 관련)
+*.sqlite
+.flaskenv
