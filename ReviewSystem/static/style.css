@@ -1,0 +1,272 @@
+body {
+    margin: 0;
+    font-family: 'Noto Sans SC', sans-serif;
+    height: 100vh;
+    overflow-x: hidden; 
+}
+.container { max-width: 1100px; margin: 0 auto; padding: 0 15px; }
+
+/* ---------------------------------------------------- */
+/* 1. 랜딩 페이지 (index.html) 스타일 */
+/* ---------------------------------------------------- */
+.navbar { background-color: #343a40; padding: 15px 0; color: white; }
+.navbar-content { display: flex; justify-content: space-between; align-items: center; }
+.navbar-logo { font-size: 1.5em; font-weight: 700; }
+.nav-links a { color: white; margin-left: 20px; font-size: 1em; }
+
+#main-banner {
+    background-image: url('/static/zhongguanyuan_building.jpg'); /* 실제 이미지 파일명으로 변경 */
+    background-size: cover; background-position: center 20%; height: 500px;
+    display: flex; align-items: center; justify-content: center; text-align: center;
+    position: relative;
+}
+#banner-overlay {
+    position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+    background-color: rgba(0, 0, 0, 0.45); z-index: 1;
+}
+#banner-content { z-index: 2; color: white; }
+#banner-content h1 { font-size: 3.5em; margin-bottom: 10px; color: white; font-weight: 700; }
+.btn-explore {
+    padding: 15px 35px; background-color: #007bff; color: white;
+    border-radius: 5px; font-size: 1.2em; font-weight: 500; transition: background-color 0.3s;
+}
+.btn-explore:hover { background-color: #0056b3; }
+
+#review-section { padding: 50px 0; text-align: center; background-color: white; }
+.review-input-area {
+    max-width: 700px; margin: 0 auto 50px auto; padding: 30px;
+    border: 1px solid #e9ecef; border-radius: 8px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+}
+.submit-btn {
+    padding: 10px 25px; background-color: #28a745; color: white;
+    border: none; border-radius: 5px; cursor: pointer; font-size: 1.05em;
+}
+.reviews-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+.review-card { padding: 20px; background-color: #f8f9fa; border-radius: 8px; text-align: left; border-top: 4px solid #007bff; }
+.review-card .name { font-weight: 700; margin-bottom: 5px; }
+.review-card .stars { color: gold; margin-bottom: 10px; font-size: 1.2em; }
+.review-card .text { font-size: 0.95em; color: #555; line-height: 1.4; }
+
+.footer { background-color: #343a40; color: #ccc; padding: 40px 0; font-size: 0.9em; }
+.footer-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 30px; }
+
+/* ---------------------------------------------------- */
+/* 2. 파노라마 뷰어 (panorama.html) 스타일 */
+/* ---------------------------------------------------- */
+body.panorama-view { overflow: hidden; } /* 파노라마 뷰어 전용: 스크롤 방지 */
+
+#panorama-viewer {
+    position: absolute; 
+    top: 0; left: 0;
+    width: 100vw; height: 100vh;
+    z-index: 1; 
+}
+
+/* 리뷰 사이드바 (고정 패널) */
+#review-sidebar {
+    position: fixed; 
+    top: 0; right: 0; /* 우측에 고정 */
+    width: 380px; /* 고정 너비 */
+    height: 100vh;
+    z-index: 10; /* 파노라마 위에 배치 */
+    
+    background-color: rgba(255, 255, 255, 0.95);
+    box-shadow: -5px 0 20px rgba(0, 0, 0, 0.2);
+    
+    overflow-y: auto; /* 사이드바 내부만 스크롤 허용 */
+    padding: 30px;
+    box-sizing: border-box;
+    
+    /* ★ 핵심: 슬라이드 아웃 애니메이션 */
+    transition: right 0.5s ease; 
+}
+
+/* ★ 핵심: 숨겨졌을 때의 상태 (화면 밖으로 이동) */
+#review-sidebar.hidden {
+    right: -380px; /* 사이드바 너비만큼 오른쪽으로 밀어 숨김 */
+}
+
+/* 토글 버튼 스타일 */
+#toggle-btn {
+    position: absolute;
+    left: -40px; /* 사이드바 밖으로 빼기 */
+    top: 50%;
+    transform: translateY(-50%);
+    width: 40px;
+    height: 60px;
+    background-color: rgba(255, 255, 255, 0.95);
+    color: #333;
+    border: none;
+    cursor: pointer;
+    border-radius: 8px 0 0 8px; 
+    box-shadow: -5px 0 10px rgba(0, 0, 0, 0.1);
+    font-size: 2em;
+    line-height: 0; 
+    padding: 0;
+    transition: left 0.5s ease; /* 버튼 자체의 위치 이동 애니메이션 */
+    z-index: 11; /* 사이드바보다 위에 있어야 함 */
+}
+
+/* 사이드바 헤더 및 기타 스타일 */
+#sidebar-header {
+    text-align: center; padding-bottom: 20px; border-bottom: 1px solid #ddd; margin-bottom: 20px;
+}
+.site-title { font-size: 1.8em; color: #2c3e50; font-weight: 700; margin: 0; }
+.subtitle { color: #666; font-size: 0.9em; margin-top: 5px; }
+.btn-back { display: inline-block; margin-top: 15px; color: #e74c3c; border: 1px solid #e74c3c; padding: 5px 10px; border-radius: 4px; transition: all 0.2s; font-size: 0.9em;}
+.btn-back:hover { background-color: #e74c3c; color: white; }
+
+/* 리뷰 입력 폼 */
+/* --- 리뷰 입력창 (Textarea) 스타일 업그레이드 --- */
+
+textarea {
+    width: 100%;
+    height: 120px; /* 기본 높이를 조금 더 시원하게 */
+    padding: 15px; /* 글자와 테두리 사이 여백 */
+    
+    border: 1px solid #e0e0e0; /* 아주 연한 회색 테두리 */
+    border-radius: 12px; /* 모서리를 둥글게 */
+    background-color: #f9f9f9; /* 아주 연한 회색 배경 (입력 전) */
+    
+    font-family: 'Noto Sans SC', sans-serif; /* 폰트 통일 */
+    font-size: 15px;
+    line-height: 1.6;
+    color: #333;
+    
+    resize: vertical; /* ★핵심: 가로 크기 조절은 막고, 세로만 가능하게 */
+    outline: none; /* 못생긴 기본 파란/검정 테두리 제거 */
+    box-sizing: border-box; /* 패딩 때문에 박스가 커지는 것 방지 */
+    
+    transition: all 0.3s ease; /* 클릭했을 때 부드럽게 변하는 애니메이션 */
+    margin-bottom: 20px; /* 아래 버튼과의 간격 */
+}
+
+/* 입력하려고 클릭했을 때 (Focus 상태) */
+textarea:focus {
+    background-color: #ffffff; /* 배경이 하얗게 변함 */
+    border-color: #28a745; /* 제출 버튼과 같은 초록색 테두리 */
+    box-shadow: 0 4px 15px rgba(40, 167, 69, 0.15); /* 초록색으로 은은하게 빛남 */
+}
+
+/* 안내 문구 (Placeholder) 스타일 */
+textarea::placeholder {
+    color: #adb5bd; /* 연한 회색 */
+    font-weight: 400;
+}
+button#submit-review-btn {
+    width: 100%; padding: 12px 0; background-color: #e74c3c; 
+    color: white; border: none; border-radius: 5px; font-size: 1.1em; cursor: pointer;
+}
+/* 리뷰 아이템 목록 */
+.review-item {
+    background-color: #f7f7f7; border-left: 4px solid #007bff;
+    padding: 12px; margin-bottom: 10px; border-radius: 5px;
+    cursor: pointer; transition: background-color 0.2s;
+}
+.review-item:hover { background-color: #eef7ff; }
+.review-item .review-target {
+    font-size: 0.85em; color: #555; background-color: #e6f2ff;
+    padding: 3px 8px; border-radius: 4px;
+}
+
+/* style.css 파일에 아래 코드를 추가합니다. */
+
+/* 리뷰가 없을 때 표시되는 메시지 스타일 */
+.no-reviews-message {
+    text-align: center;
+    padding: 40px;
+    font-size: 1.2em;
+    color: #6c757d;
+    background-color: #f8f9fa; /* 리뷰 카드의 배경색과 비슷하게 설정 */
+    border-radius: 8px;
+    margin-top: 20px;
+    grid-column: 1 / -1; /* 그리드 전체 너비를 차지하도록 설정 */
+}
+
+/* style.css 맨 아래 추가 */
+
+.review-sub-item {
+    padding: 12px 15px; /* 간격 넓힘 */
+    border-bottom: 1px solid #f1f1f1;
+    background-color: #fff;
+}
+
+/* 마지막 리뷰는 밑줄 없애기 */
+.review-sub-item:last-child {
+    border-bottom: none;
+}
+
+/* 짝수 번째 리뷰는 배경색을 살짝 다르게 (구분감 주기) */
+.review-sub-item:nth-child(even) {
+    background-color: #fafafa;
+}
+/* --- style.css 파일 맨 아래에 추가 --- */
+
+/* 1. 리뷰 입력창 모던 스타일 */
+textarea {
+    width: 100%;
+    height: 120px;
+    padding: 15px;
+    border: 1px solid #e0e0e0;
+    border-radius: 12px;
+    background-color: #f9f9f9;
+    font-family: 'Noto Sans SC', sans-serif;
+    font-size: 15px;
+    resize: vertical;
+    outline: none;
+    box-sizing: border-box;
+    transition: all 0.3s ease;
+    margin-bottom: 20px;
+}
+textarea:focus {
+    background-color: #ffffff;
+    border-color: #28a745;
+    box-shadow: 0 4px 15px rgba(40, 167, 69, 0.15);
+}
+
+/* 2. 정렬 필터 바 스타일 */
+.filter-bar {
+    max-width: 1100px;
+    margin: 0 auto 20px auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #eee; /* 하단 구분선 추가 */
+    padding-bottom: 15px;
+}
+
+/* 3. 정렬 버튼 스타일 */
+.sort-btn {
+    background: none;
+    border: 1px solid #ddd;
+    padding: 6px 16px;
+    border-radius: 20px; /* 둥근 버튼 */
+    cursor: pointer;
+    color: #666;
+    margin-left: 8px;
+    font-size: 0.9em;
+    transition: all 0.2s;
+}
+
+.sort-btn:hover {
+    background-color: #f0f0f0;
+}
+
+/* 활성화된 버튼 (파란색) */
+.sort-btn.active {
+    background-color: #007bff;
+    color: white;
+    border-color: #007bff;
+    box-shadow: 0 2px 5px rgba(0, 123, 255, 0.3);
+}
+
+/* 리뷰 없음 메시지 */
+.no-reviews-message {
+    text-align: center;
+    padding: 40px;
+    color: #999;
+    font-size: 1.1em;
+    grid-column: 1 / -1;
+    background: #f9f9f9;
+    border-radius: 8px;
+}
