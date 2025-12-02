@@ -9,21 +9,53 @@ from datetime import datetime
 db_reviews = []
 
 app = Flask(__name__)
-app.template_folder = os.path.dirname(os.path.abspath(__file__)) 
-app.static_url_path = '/static'
-app.static_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static')
+app.template_folder = os.path.dirname(os.path.abspath(__file__))
+app.static_url_path = "/static"
+app.static_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
+
 
 # 1. 중국어 -> YOLO 영어 클래스 매핑 함수
 def detect_target_object(text):
     text = text.lower()
     mapping = {
         # --- 가구 (Furniture) ---
-        "bed": ["床", "bed", "shuijiao", "睡觉", "床垫", "床单", "枕头", "被子", "铺", "塌"],
+        "bed": [
+            "床",
+            "bed",
+            "shuijiao",
+            "睡觉",
+            "床垫",
+            "床单",
+            "枕头",
+            "被子",
+            "铺",
+            "塌",
+        ],
         "couch": ["沙发", "sofa", "couch", "沙發", "坐垫", "软椅", "躺椅"],
         "chair": ["椅子", "chair", "seat", "座", "凳子", "板凳", "靠背椅", "转椅"],
-        "dining table": ["餐桌", "table", "桌子", "食桌", "饭桌", "茶几", "台子", "案子", "写字台", "书桌"],
-        "toilet": ["马桶", "toilet", "卫生间", "厕所", "洗手间", "茅房", "便池", "坐便器", "卫浴"],
-        
+        "dining table": [
+            "餐桌",
+            "table",
+            "桌子",
+            "食桌",
+            "饭桌",
+            "茶几",
+            "台子",
+            "案子",
+            "写字台",
+            "书桌",
+        ],
+        "toilet": [
+            "马桶",
+            "toilet",
+            "卫生间",
+            "厕所",
+            "洗手间",
+            "茅房",
+            "便池",
+            "坐便器",
+            "卫浴",
+        ],
         # --- 전자제품 (Electronics) ---
         "tv": ["电视", "tv", "monitor", "screen", "屏幕", "显示器", "彩电", "投影"],
         "laptop": ["笔记本", "电脑", "computer", "PC", "笔电", "macbook", "手提电脑"],
@@ -35,7 +67,6 @@ def detect_target_object(text):
         "toaster": ["面包机", "toaster", "烤面包"],
         "refrigerator": ["冰箱", "fridge", "冰柜", "冷藏"],
         "clock": ["时钟", "clock", "钟表", "闹钟", "挂钟"],
-        
         # --- 소품/기타 (Accessories & Others) ---
         "potted plant": ["花", "plant", "草", "盆栽", "植物", "绿植", "花草", "树"],
         "vase": ["花瓶", "vase", "瓶子"],
@@ -48,10 +79,10 @@ def detect_target_object(text):
         "cup": ["杯子", "cup", "水杯", "茶杯", "咖啡杯"],
         "bowl": ["碗", "bowl", "饭碗"],
         "trash can": ["垃圾桶", "trash", "废物箱", "纸篓"],
-        "lamp": ["灯", "lamp", "台灯", "路灯", "照明", "光"], 
+        "lamp": ["灯", "lamp", "台灯", "路灯", "照明", "光"],
         "mirror": ["镜子", "mirror", "穿衣镜", "梳妆镜"],
         "window": ["窗户", "window", "窗帘", "玻璃", "窗台"],
-        "door": ["门", "door", "门口", "大门", "房门"]
+        "door": ["门", "door", "门口", "大门", "房门"],
     }
     found_targets = []
     for yolo_class, keywords in mapping.items():
@@ -60,53 +91,57 @@ def detect_target_object(text):
                 # 중복 방지를 위해 리스트에 없으면 추가
                 if yolo_class not in found_targets:
                     found_targets.append(yolo_class)
-    
-    return found_targets # 이제 리스트를 반환합니다! (예: ['couch', 'chair'])
 
-@app.route('/')
+    return found_targets  # 이제 리스트를 반환합니다! (예: ['couch', 'chair'])
+
+
+@app.route("/")
 def index():
-    return render_template('index.html')
+    return render_template("index.html")
 
-@app.route('/panorama')
+
+@app.route("/panorama")
 def panorama():
-    return render_template('panorama.html')
+    return render_template("panorama.html")
 
-@app.route('/submit_review', methods=['POST'])
+
+@app.route("/submit_review", methods=["POST"])
 def submit_review():
-    full_review = request.form.get('review_content')
-    rating = int(request.form.get('rating'))
-    user_name = '用户' + datetime.now().strftime("%H%M")
+    full_review = request.form.get("review_content")
+    rating = int(request.form.get("rating"))
+    user_name = "用户" + datetime.now().strftime("%H%M")
 
     # 1. 문장을 구분 기호(쉼표, 마침표, 공백 등)로 쪼갭니다.
     # 정규표현식: 중국어 쉼표(，), 영어 쉼표(,), 마침표(。), 느낌표(!), 물음표(?), 공백(\s) 기준
-    segments = re.split(r'[，,。!！?？\n]+', full_review)
-    
+    segments = re.split(r"[，,。!！?？\n]+", full_review)
+
     # 쪼개진 문장들을 하나씩 검사합니다.
     # 예: segments = ["沙发太好了", "椅子不好", ""]
-    
+
     processed_count = 0
-    
+
     for segment in segments:
-        segment = segment.strip() # 앞뒤 공백 제거
-        if not segment: continue # 빈 문장이면 패스
+        segment = segment.strip()  # 앞뒤 공백 제거
+        if not segment:
+            continue  # 빈 문장이면 패스
 
         # 이 조각이 어떤 물건에 대한 건지 확인
         targets = detect_target_object(segment)
-        
+
         if targets:
             # 타겟을 찾았다면, 해당 타겟별로 리뷰를 각각 저장
             for target in targets:
                 new_review = {
-                    'name': user_name,
-                    'rating': rating,
-                    'text': segment, # 전체 문장이 아니라 '해당 조각'만 저장 (깔끔함)
-                    'target': target
+                    "name": user_name,
+                    "rating": rating,
+                    "text": segment,  # 전체 문장이 아니라 '해당 조각'만 저장 (깔끔함)
+                    "target": target,
                 }
                 db_reviews.insert(0, new_review)
                 processed_count += 1
         else:
             # 타겟을 못 찾은 문장(일반 평가 등)은 그냥 저장할지, 버릴지 결정
-            # 여기서는 'general'이나 None으로 저장하거나, 
+            # 여기서는 'general'이나 None으로 저장하거나,
             # 만약 전체 문장에 타겟이 하나도 없었다면 통째로 하나 저장하는 로직을 추가할 수 있음.
             pass
 
@@ -114,18 +149,20 @@ def submit_review():
     # 그러면 전체 문장을 그냥 저장하고 target은 None (일반 리뷰)으로 둡니다.
     if processed_count == 0:
         new_review = {
-            'name': user_name,
-            'rating': rating,
-            'text': full_review,
-            'target': None
+            "name": user_name,
+            "rating": rating,
+            "text": full_review,
+            "target": None,
         }
         db_reviews.insert(0, new_review)
 
     return redirect(url_for('index'))
 
-@app.route('/api/reviews', methods=['GET'])
+
+@app.route("/api/reviews", methods=["GET"])
 def api_reviews():
     return jsonify(db_reviews)
 
-if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+
+if __name__ == "__main__":
+    app.run(debug=False, port=5000)
