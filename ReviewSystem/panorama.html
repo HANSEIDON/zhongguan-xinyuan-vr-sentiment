@@ -45,32 +45,38 @@
 
         // 2. 파노라마 뷰어 설정
         // 2. 파노라마 뷰어 설정 (핫스팟 텍스트 수정)
+// 2. 파노라마 뷰어 설정 (핫스팟 텍스트 로직 수정)
     function initPanorama() {
         const processedHotspots = panoramaData.hotSpots.map(spot => {
             const objectName = spot.text.split(' ')[0].toLowerCase();
             
-            // ★ 수정: find(1개) 대신 filter(전체)로 해당 물체의 모든 리뷰를 찾음
-            const relatedReviews = reviewData.filter(r => r.target === objectName);
+            // ★ 수정: 전체 리뷰들 중에서, 이 물체(objectName)에 대한 얘기가 있는지 찾기
+            let relatedText = null;
+            let count = 0;
+
+            reviewData.forEach(review => {
+                // 각 리뷰 안에 있는 'sub_reviews'를 뒤짐
+                if (review.sub_reviews && review.sub_reviews.length > 0) {
+                    review.sub_reviews.forEach(sub => {
+                        if (sub.target === objectName) {
+                            count++;
+                            // 가장 최신 코멘트 하나만 저장 (상단에 띄울 용도)
+                            if (!relatedText) relatedText = sub.segment_text;
+                        }
+                    });
+                }
+            });
             
             let displayText = objectName.toUpperCase();
-            
-            if (relatedReviews.length > 0) {
-                // 최신 리뷰 1개 가져오기 (배열의 0번째가 최신이라고 가정)
-                const latest = relatedReviews[0];
-                const count = relatedReviews.length;
-                
-                // 텍스트 예시: "침대가 딱딱해요... (총 3건)"
+            if (relatedText) {
                 if (count > 1) {
-                    displayText = `💬 ${latest.text.substring(0, 10)}... (共 ${count}条)`;
+                    displayText = `💬 ${relatedText.substring(0, 10)}... (共 ${count}条)`;
                 } else {
-                    displayText = `💬 ${latest.text} (${displayText})`;
+                    displayText = `💬 ${relatedText} (${displayText})`;
                 }
             }
             
-            return {
-                ...spot,
-                text: displayText 
-            };
+            return { ...spot, text: displayText };
         });
 
         window.panoramaViewer = pannellum.viewer('panorama-viewer', { 
@@ -82,7 +88,7 @@
         });
     }
 
-        // 3. 사이드바 목록 그리기 (여러 리뷰 표시 기능 추가)
+    // 3. 사이드바 목록 그리기 (로직 수정)
     function renderSidebarList() {
         const listContainer = document.getElementById('review-list');
         let html = '';
@@ -96,23 +102,37 @@
             const objectName = spot.text.split(' ')[0].toLowerCase(); 
             const displayName = objectName.toUpperCase(); 
 
-            // ★ 수정: 해당 가구의 모든 리뷰 찾기
-            const relatedReviews = reviewData.filter(r => r.target === objectName);
+            // ★ 수정: 해당 가구와 관련된 리뷰 조각들 수집
+            let matchedSubReviews = [];
 
-            // 가구 헤더
+            reviewData.forEach(review => {
+                if (review.sub_reviews) {
+                    review.sub_reviews.forEach(sub => {
+                        if (sub.target === objectName) {
+                            // 부모 리뷰의 정보(이름, 별점)와 조각 텍스트를 합쳐서 저장
+                            matchedSubReviews.push({
+                                name: review.name,
+                                rating: review.rating,
+                                text: sub.segment_text // 전체 문장이 아니라 해당 조각만 가져옴
+                            });
+                        }
+                    });
+                }
+            });
+
+            // HTML 생성
             html += `
                 <div class="furniture-card" onclick="jumpToHotspot(${spot.pitch}, ${spot.yaw})">
                     <div class="furniture-header">
                         <strong>${displayName} #${index + 1}</strong>
                         <span style="font-size:0.8em; color:#666;">
-                            📍 ${relatedReviews.length > 0 ? relatedReviews.length + '条评论' : '点击定位'}
+                            📍 ${matchedSubReviews.length > 0 ? matchedSubReviews.length + '条评论' : '点击定位'}
                         </span>
                     </div>
             `;
 
-            // ★ 수정: 리뷰가 여러 개면 반복문(forEach)으로 모두 출력
-            if (relatedReviews.length > 0) {
-                relatedReviews.forEach(r => {
+            if (matchedSubReviews.length > 0) {
+                matchedSubReviews.forEach(r => {
                     html += `
                         <div class="review-sub-item">
                             <div style="display:flex; justify-content:space-between; margin-bottom:2px;">
@@ -128,15 +148,15 @@
                     `;
                 });
             } else {
-                html += `<div class="review-sub-item" style="color:#999; font-style:italic;">暂无评价</div>`;
+                html += `<div class="review-sub-item" style="color:#999; font-style:italic;">暂无评价 (리뷰 없음)</div>`;
             }
 
-            html += `</div>`; // 카드 닫기
+            html += `</div>`; 
         });
 
         listContainer.innerHTML = html;
     }
-
+        
         function jumpToHotspot(pitch, yaw) {
             if (window.panoramaViewer) {
                 window.panoramaViewer.setPitch(pitch, 1000);
@@ -193,3 +213,4 @@
 </body>
 
 </html>
+
