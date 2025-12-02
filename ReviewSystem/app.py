@@ -156,7 +156,7 @@ def submit_review():
         }
         db_reviews.insert(0, new_review)
 
-    return redirect(url_for('index'))
+    return redirect("/")
 
 
 @app.route("/api/reviews", methods=["GET"])
