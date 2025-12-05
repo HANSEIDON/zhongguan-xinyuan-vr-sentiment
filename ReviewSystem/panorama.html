@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>北京大学中关新园 - 房间探索</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.css"/>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.js"></script>
+    <link rel="stylesheet" href="static/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <div id="panorama-viewer"></div>
+
+    <div id="review-sidebar">
+        <button id="toggle-btn" onclick="toggleSidebar()">&times;</button> 
+        
+        <div id="sidebar-header">
+            <h1 class="site-title">房间全景探索</h1>
+            <div class="subtitle">点击评论可定位房间内物体</div>
+            <a href="/" class="btn-back">返回首页 </a> 
+        </div>
+
+        <div id="all-reviews-section">
+            <h3>检测到的物体与评价</h3>
+            <div id="review-list"></div>
+        </div>
+    </div>
+
+    <script>
+        let panoramaData = null; // 가구 위치 데이터
+        let reviewData = null;   // 사용자 리뷰 데이터
+
+        // 1. 데이터 로딩
+        Promise.all([
+            fetch('/static/data.json?t=' + new Date().getTime()).then(r => r.json()),
+            fetch('/api/reviews').then(r => r.json())
+        ]).then(([pData, rData]) => {
+            panoramaData = pData;
+            reviewData = rData;
+            
+            initPanorama();
+            renderSidebarList(); // 목록 그리기
+        });
+
+        // 2. 파노라마 뷰어 설정
+        // 2. 파노라마 뷰어 설정 (핫스팟 텍스트 수정)
+// 2. 파노라마 뷰어 설정 (핫스팟 텍스트 로직 수정)
+    function initPanorama() {
+        const processedHotspots = panoramaData.hotSpots.map(spot => {
+            const objectName = spot.text.split(' ')[0].toLowerCase();
+            
+            // ★ 수정: 전체 리뷰들 중에서, 이 물체(objectName)에 대한 얘기가 있는지 찾기
+            let relatedText = null;
+            let count = 0;
+
+            reviewData.forEach(review => {
+                // 각 리뷰 안에 있는 'sub_reviews'를 뒤짐
+                if (review.sub_reviews && review.sub_reviews.length > 0) {
+                    review.sub_reviews.forEach(sub => {
+                        if (sub.target === objectName) {
+                            count++;
+                            // 가장 최신 코멘트 하나만 저장 (상단에 띄울 용도)
+                            if (!relatedText) relatedText = sub.segment_text;
+                        }
+                    });
+                }
+            });
+            
+            let displayText = objectName.toUpperCase();
+            if (relatedText) {
+                if (count > 1) {
+                    displayText = `💬 ${relatedText.substring(0, 10)}... (共 ${count}条)`;
+                } else {
+                    displayText = `💬 ${relatedText} (${displayText})`;
+                }
+            }
+            
+            return { ...spot, text: displayText };
+        });
+
+        window.panoramaViewer = pannellum.viewer('panorama-viewer', { 
+            "type": "equirectangular",
+            "panorama": panoramaData.panorama_image,
+            "autoLoad": true,
+            "hotSpots": processedHotspots,
+            "compass": true 
+        });
+    }
+
+    // 3. 사이드바 목록 그리기 (로직 수정)
+    function renderSidebarList() {
+        const listContainer = document.getElementById('review-list');
+        let html = '';
+        
+        if (!panoramaData.hotSpots || panoramaData.hotSpots.length === 0) {
+            listContainer.innerHTML = '<div style="padding:10px;">未检测到物体</div>';
+            return;
+        }
+
+        panoramaData.hotSpots.forEach((spot, index) => {
+            const objectName = spot.text.split(' ')[0].toLowerCase(); 
+            const displayName = objectName.toUpperCase(); 
+
+            // ★ 수정: 해당 가구와 관련된 리뷰 조각들 수집
+            let matchedSubReviews = [];
+
+            reviewData.forEach(review => {
+                if (review.sub_reviews) {
+                    review.sub_reviews.forEach(sub => {
+                        if (sub.target === objectName) {
+                            // 부모 리뷰의 정보(이름, 별점)와 조각 텍스트를 합쳐서 저장
+                            matchedSubReviews.push({
+                                name: review.name,
+                                rating: review.rating,
+                                text: sub.segment_text // 전체 문장이 아니라 해당 조각만 가져옴
+                            });
+                        }
+                    });
+                }
+            });
+
+            // HTML 생성
+            html += `
+                <div class="furniture-card" onclick="jumpToHotspot(${spot.pitch}, ${spot.yaw})">
+                    <div class="furniture-header">
+                        <strong>${displayName} #${index + 1}</strong>
+                        <span style="font-size:0.8em; color:#666;">
+                            📍 ${matchedSubReviews.length > 0 ? matchedSubReviews.length + '条评论' : '点击定位'}
+                        </span>
+                    </div>
+            `;
+
+            if (matchedSubReviews.length > 0) {
+                matchedSubReviews.forEach(r => {
+                    html += `
+                        <div class="review-sub-item">
+                            <div style="display:flex; justify-content:space-between; margin-bottom:2px;">
+                                <span style="font-weight:bold; color:#007bff; font-size:0.85em;">
+                                    ${r.name}
+                                </span>
+                                <span style="color:gold; font-size:0.8em;">${'⭐'.repeat(r.rating)}</span>
+                            </div>
+                            <div style="color:#333; font-size:0.9em; line-height:1.4;">
+                                ${r.text}
+                            </div>
+                        </div>
+                    `;
+                });
+            } else {
+                html += `<div class="review-sub-item" style="color:#999; font-style:italic;">暂无评价</div>`;
+            }
+
+            html += `</div>`; 
+        });
+
+        listContainer.innerHTML = html;
+    }
+        
+        function jumpToHotspot(pitch, yaw) {
+            if (window.panoramaViewer) {
+                window.panoramaViewer.setPitch(pitch, 1000);
+                window.panoramaViewer.setYaw(yaw, 1000);
+            }
+        }
+        
+        function toggleSidebar() {
+            const sidebar = document.getElementById('review-sidebar');
+            const toggleBtn = document.getElementById('toggle-btn');
+            const isHidden = sidebar.classList.toggle('hidden');
+            
+            if (isHidden) {
+                toggleBtn.innerHTML = '&#9664;';
+                toggleBtn.style.left = '0';
+            } else {
+                toggleBtn.innerHTML = '&times;';
+                toggleBtn.style.left = '-40px';
+            }
+        }
+    </script>
+    
+    <style>
+        .furniture-card {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: box-shadow 0.2s;
+        }
+        .furniture-card:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            border-color: #007bff;
+        }
+        .furniture-header {
+            background: #f8f9fa;
+            padding: 10px 15px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .review-sub-item {
+            padding: 10px 15px;
+            border-bottom: 1px solid #f1f1f1;
+            font-size: 0.9em;
+        }
+        .review-sub-item:last-child {
+            border-bottom: none;
+        }
+    </style>
+</body>
+
+</html>
+
+
