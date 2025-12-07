@@ -1,17 +1,15 @@
-from typing import List, Tuple, Dict, Any
+from typing import List, Dict, Any
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.svm import LinearSVC
 from sklearn.model_selection import RandomizedSearchCV
-import joblib
 import numpy as np
 
 
 def build_vectorizer() -> TfidfVectorizer:
-    
     vectorizer = TfidfVectorizer(
         analyzer="char",
-        ngram_range=(1, 3),   #只使用一个字～三个字的词汇
-        min_df=5   # <5 -> outlier
+        ngram_range=(1, 3),  # 只使用一个字～三个字的词汇
+        min_df=5,  # <5 -> outlier
     )
     return vectorizer
 
@@ -21,9 +19,8 @@ def tune_linear_svm_with_cv(
     labels: List[str],
     search_mode: str = "random",
     cv: int = 5,
-    n_iter: int = 20
+    n_iter: int = 20,
 ) -> Dict[str, Any]:
-    
     vectorizer = build_vectorizer()
     X = vectorizer.fit_transform(texts)
 
@@ -34,15 +31,15 @@ def tune_linear_svm_with_cv(
     param_dist = {
         "C": np.logspace(-3, 2, 100)  # 0.001 ~ 100, randomized 100 values
     }
-    
+
     searcher = RandomizedSearchCV(
         estimator=base_clf,
         param_distributions=param_dist,
         n_iter=n_iter,
         cv=cv,
         scoring="f1_weighted",
-        n_jobs=-1, #CPU usage
-        random_state=42
+        n_jobs=-1,  # CPU usage
+        random_state=42,
     )
 
     searcher.fit(X, labels)
@@ -56,5 +53,5 @@ def tune_linear_svm_with_cv(
         "vectorizer": vectorizer,
         "best_params": best_params,
         "best_score": best_score,
-        "cv_results": searcher.cv_results_
+        "cv_results": searcher.cv_results_,
     }

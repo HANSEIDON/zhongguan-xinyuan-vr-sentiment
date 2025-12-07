@@ -1,8 +1,8 @@
 import json
 from sklearn.metrics import classification_report, accuracy_score, confusion_matrix
 
-def load_eval_pair(eval_path: str, labeled_path: str):
 
+def load_eval_pair(eval_path: str, labeled_path: str):
     # establishing id + label pair
     with open(labeled_path, "r", encoding="utf-8") as f:
         labeled_data = json.load(f)
@@ -35,9 +35,7 @@ def load_eval_pair(eval_path: str, labeled_path: str):
     return ids, texts, true_labels
 
 
-def evaluate_eval_files(
-    model, vectorizer, eval_path: str, labeled_path: str):
-
+def evaluate_eval_files(model, vectorizer, eval_path: str, labeled_path: str):
     ids, texts, true_labels = load_eval_pair(eval_path, labeled_path)
     print("Target Samples: %s" % eval_path)
     print(f"Total eval samples: {len(texts)}")

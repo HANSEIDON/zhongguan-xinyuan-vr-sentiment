@@ -1,10 +1,12 @@
 import json
+from collections import Counter
+
 
 # 1. 파일 경로 설정 (파일이 있는 경로로 수정하세요)
-file_path = './usual_train.txt'
+file_path = "./usual_train.txt"
 
 # 2. 데이터 불러오기
-with open(file_path, 'r', encoding='utf-8') as f:
+with open(file_path, "r", encoding="utf-8") as f:
     data = json.load(f)
 
 # 3. 데이터 양 확인
@@ -20,8 +22,8 @@ for item in data[:5]:
     print("-" * 20)
 
 # 5. 데이터셋에 어떤 감정들이 있는지 확인 (라벨 분포)
-labels = [item['label'] for item in data]
-from collections import Counter
+labels = [item["label"] for item in data]
+
 label_counts = Counter(labels)
 
 print("\n--- [감정 라벨별 데이터 개수] ---")

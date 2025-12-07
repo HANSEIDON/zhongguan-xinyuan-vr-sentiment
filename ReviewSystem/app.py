@@ -1,6 +1,5 @@
 from flask import Flask, render_template, request, redirect, url_for, jsonify
 import os
-import json
 import re
 from datetime import datetime
 
@@ -105,45 +104,44 @@ def panorama():
     return render_template("panorama.html")
 
 
-@app.route('/submit_review', methods=['POST'])
+@app.route("/submit_review", methods=["POST"])
 def submit_review():
-    full_review = request.form.get('review_content')
-    rating = int(request.form.get('rating'))
-    user_name = '用户' + datetime.now().strftime("%H%M")
+    full_review = request.form.get("review_content")
+    rating = int(request.form.get("rating"))
+    user_name = "用户" + datetime.now().strftime("%H%M")
 
     # 1. 문장 쪼개기
-    segments = re.split(r'[，,。!！?？\n]+', full_review)
-    
+    segments = re.split(r"[，,。!！?？\n]+", full_review)
+
     # 2. 쪼개진 조각들 분석해서 'sub_reviews' 리스트 만들기
-    sub_reviews = [] # 세부 내용 담을 바구니
-    
+    sub_reviews = []  # 세부 내용 담을 바구니
+
     for segment in segments:
         segment = segment.strip()
-        if not segment: continue
+        if not segment:
+            continue
 
         # 이 조각이 어떤 물건인지 확인
-        targets = detect_target_object(segment) # 리스트 반환 (예: ['couch'])
-        
+        targets = detect_target_object(segment)  # 리스트 반환 (예: ['couch'])
+
         if targets:
             for target in targets:
                 # 조각 정보를 담음 (예: 소파에 대한 칭찬)
-                sub_reviews.append({
-                    'target': target,
-                    'segment_text': segment
-                })
+                sub_reviews.append({"target": target, "segment_text": segment})
 
     # 3. DB에는 "하나의 리뷰"로 저장하되, 세부 정보를 안에 포함시킴
     new_review = {
-        'name': user_name,
-        'rating': rating,
-        'text': full_review,   # 메인 화면용 전체 문장
-        'sub_reviews': sub_reviews # 파노라마용 세부 조각 리스트
+        "name": user_name,
+        "rating": rating,
+        "text": full_review,  # 메인 화면용 전체 문장
+        "sub_reviews": sub_reviews,  # 파노라마용 세부 조각 리스트
     }
-    
+
     db_reviews.insert(0, new_review)
 
-    return redirect(url_for('index'))
-    
+    return redirect(url_for("index"))
+
+
 @app.route("/api/reviews", methods=["GET"])
 def api_reviews():
     return jsonify(db_reviews)
@@ -151,4 +149,3 @@ def api_reviews():
 
 if __name__ == "__main__":
     app.run(debug=False, port=5000)
-

@@ -21,7 +21,7 @@ image_file_path = os.path.join(static_folder, "room.jpg")
 
 # 2. 파일이 진짜 있는지 확인 (에러 방지)
 if not os.path.exists(image_file_path):
-    print(f"\n❌ 에러 발생! 파일을 찾을 수 없습니다.")
+    print("\n❌ 에러 발생! 파일을 찾을 수 없습니다.")
     print(f"찾으려는 위치: {image_file_path}")
     print("👉 'room.jpg' 파일이 'static' 폴더 안에 들어있는지 꼭 확인하세요!")
     exit()
@@ -45,7 +45,7 @@ result = results[0]
 
 hotspots = []
 
-print(f"\n--- 감지된 물체 ---")
+print("\n--- 감지된 물체 ---")
 
 for box in result.boxes:
     cls_id = int(box.cls[0])
@@ -80,6 +80,6 @@ final_data = {
 with open(json_save_path, "w", encoding="utf-8") as f:
     json.dump(final_data, f, indent=4, ensure_ascii=False)
 
-print(f"\n✅ data.json 생성 완료!")
+print("\n✅ data.json 생성 완료!")
 print(f"저장된 위치: {json_save_path}")
 print("이제 'python app.py'를 실행하세요.")
