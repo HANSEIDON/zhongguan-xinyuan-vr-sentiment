@@ -15,7 +15,6 @@ from torch.utils.data import DataLoader
 from transformers import AutoModelForSequenceClassification
 
 
-
 class AverageMeter(object):
     """Computes and stores the average and current value"""
 
