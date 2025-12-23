@@ -1,23 +1,126 @@
 from flask import Flask, render_template, request, redirect, url_for, jsonify
 import os
-import re
 from datetime import datetime
 
-# 임시 데이터베이스 (서버 끄면 초기화됨)
-# target: 이 리뷰가 어떤 물건(영어)에 대한 것인지 저장
-db_reviews = []
+# AI 관련 라이브러리
+import torch
+from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
 app = Flask(__name__)
 app.template_folder = os.path.dirname(os.path.abspath(__file__))
 app.static_url_path = "/static"
 app.static_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
 
+# ----------------------------------------------------
+# [설정] 사용자 이름 매핑 (IP -> 별명)
+# ----------------------------------------------------
+user_ip_map = {}
+nickname_list = [
+    "Alice",
+    "Bob",
+    "Charlie",
+    "David",
+    "Eve",
+    "Frank",
+    "Grace",
+    "Heidi",
+    "Ivan",
+    "Judy",
+    "Kevin",
+    "Lily",
+    "Mallory",
+    "Niaj",
+    "Oscar",
+    "Peggy",
+]
 
-# 1. 중국어 -> YOLO 영어 클래스 매핑 함수
+
+def get_nickname(ip_address):
+    if ip_address not in user_ip_map:
+        idx = len(user_ip_map) % len(nickname_list)
+        user_ip_map[ip_address] = nickname_list[idx]
+    return user_ip_map[ip_address]
+
+
+# ----------------------------------------------------
+# [AI 준비] 모델 로딩
+# ----------------------------------------------------
+print("Loading AI Model...")
+
+MODEL_NAME = "hfl/chinese-roberta-wwm-ext"
+MODEL_PATH = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "models", "best.pt"
+)
+device = torch.device("cpu")
+
+try:
+    tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
+    model = AutoModelForSequenceClassification.from_pretrained(MODEL_NAME, num_labels=6)
+
+    checkpoint = torch.load(MODEL_PATH, map_location=device, weights_only=False)
+    state_dict = checkpoint.get("state_dict", checkpoint)
+    model.load_state_dict(state_dict, strict=False)
+    model.to(device)
+    model.eval()
+    print("✅ AI Model Loaded Successfully!")
+except Exception as e:
+    print(f"⚠️ 모델 로딩 실패 (기본 모드로 동작합니다): {e}")
+    model = None
+
+
+# ----------------------------------------------------
+# [AI 기능 1] 감정 분석 함수
+# ----------------------------------------------------
+def analyze_sentiment(text):
+    if model is None:
+        return "", "neutral"
+
+    try:
+        encoded = tokenizer(
+            text,
+            padding="max_length",
+            truncation=True,
+            max_length=140,
+            return_tensors="pt",
+        )
+        input_ids = encoded["input_ids"].to(device)
+        attention_mask = encoded["attention_mask"].to(device)
+
+        with torch.no_grad():
+            output = model(input_ids=input_ids, attention_mask=attention_mask)
+
+        pred_id = int(torch.argmax(output.logits, dim=-1).cpu().item())
+
+        label_map = {
+            0: "happy",
+            1: "angry",
+            2: "sad",
+            3: "fear",
+            4: "surprise",
+            5: "neutral",
+        }
+        emoji_map = {
+            "happy": "😊",
+            "angry": "🤬",
+            "sad": "😢",
+            "fear": "😱",
+            "surprise": "😧",
+            "neutral": "",
+        }
+
+        label_text = label_map[pred_id]
+        emoji = emoji_map[label_text]
+        return emoji, label_text
+    except:
+        return "", "neutral"
+
+
+# ----------------------------------------------------
+# [AI 기능 2] 사물 인식 매핑 함수
+# ----------------------------------------------------
 def detect_target_object(text):
     text = text.lower()
     mapping = {
-        # --- 가구 (Furniture) ---
         "bed": [
             "床",
             "bed",
@@ -55,43 +158,42 @@ def detect_target_object(text):
             "坐便器",
             "卫浴",
         ],
-        # --- 전자제품 (Electronics) ---
         "tv": ["电视", "tv", "monitor", "screen", "屏幕", "显示器", "彩电", "投影"],
         "laptop": ["笔记本", "电脑", "computer", "PC", "笔电", "macbook", "手提电脑"],
         "mouse": ["鼠标", "mouse", "滑鼠"],
         "keyboard": ["键盘", "keyboard", "键盤"],
         "cell phone": ["手机", "phone", "电话", "手提电话", "智能机", "iphone", "华为"],
         "microwave": ["微波炉", "microwave", "热饭", "烤箱"],
-        "oven": ["烤箱", "oven", "炉子"],
-        "toaster": ["面包机", "toaster", "烤面包"],
         "refrigerator": ["冰箱", "fridge", "冰柜", "冷藏"],
         "clock": ["时钟", "clock", "钟表", "闹钟", "挂钟"],
-        # --- 소품/기타 (Accessories & Others) ---
         "potted plant": ["花", "plant", "草", "盆栽", "植物", "绿植", "花草", "树"],
-        "vase": ["花瓶", "vase", "瓶子"],
         "book": ["书", "book", "本子", "教材", "课本", "读物", "杂志", "小说"],
-        "backpack": ["书包", "bag", "背包", "双肩包", "行李", "包包"],
-        "handbag": ["手提包", "purse", "挎包", "皮包"],
-        "suitcase": ["行李箱", "suitcase", "拉杆箱", "箱子"],
-        "umbrella": ["雨伞", "umbrella", "伞", "阳伞"],
-        "bottle": ["瓶子", "bottle", "水瓶", "饮料", "矿泉水"],
-        "cup": ["杯子", "cup", "水杯", "茶杯", "咖啡杯"],
-        "bowl": ["碗", "bowl", "饭碗"],
         "trash can": ["垃圾桶", "trash", "废物箱", "纸篓"],
         "lamp": ["灯", "lamp", "台灯", "路灯", "照明", "光"],
-        "mirror": ["镜子", "mirror", "穿衣镜", "梳妆镜"],
-        "window": ["窗户", "window", "窗帘", "玻璃", "窗台"],
         "door": ["门", "door", "门口", "大门", "房门"],
+        "wardrobe": [
+            "衣柜",
+            "wardrobe",
+            "closet",
+            "柜子",
+            "大衣柜",
+            "储物柜",
+            "衣服",
+            "挂衣",
+        ],
     }
+
     found_targets = []
     for yolo_class, keywords in mapping.items():
         for keyword in keywords:
             if keyword in text:
-                # 중복 방지를 위해 리스트에 없으면 추가
                 if yolo_class not in found_targets:
                     found_targets.append(yolo_class)
+    return found_targets
 
-    return found_targets  # 이제 리스트를 반환합니다! (예: ['couch', 'chair'])
+
+# 임시 DB (서버 재시작 시 초기화됨)
+db_reviews = []
 
 
 @app.route("/")
@@ -104,41 +206,49 @@ def panorama():
     return render_template("panorama.html")
 
 
+# ----------------------------------------------------
+# [핵심 변경] 리뷰 제출 및 분석 라우트
+# ----------------------------------------------------
 @app.route("/submit_review", methods=["POST"])
 def submit_review():
-    full_review = request.form.get("review_content")
-    rating = int(request.form.get("rating"))
-    user_name = "用户" + datetime.now().strftime("%H%M")
+    full_review = request.form.get("review_content", "")
+    rating = int(request.form.get("rating", 3))
 
-    # 1. 문장 쪼개기
-    segments = re.split(r"[，,。!！?？\n]+", full_review)
+    # 1. IP 기반 닉네임 생성
+    user_ip = request.remote_addr
+    user_name = get_nickname(user_ip)
 
-    # 2. 쪼개진 조각들 분석해서 'sub_reviews' 리스트 만들기
-    sub_reviews = []  # 세부 내용 담을 바구니
+    # 2. 감정 분석: 문장을 쪼개지 않고 '통째로' 분석합니다.
+    # 이렇게 해야 "床垫简直是yyds!" 처럼 문맥이 필요한 문장을 정확히 인식합니다.
+    main_emoji, _ = analyze_sentiment(full_review)
 
-    for segment in segments:
-        segment = segment.strip()
-        if not segment:
-            continue
+    # 3. 사물 인식: 전체 텍스트에서 언급된 모든 가구를 찾습니다.
+    # (re.split을 쓰지 않으므로 문장이 잘려서 가구를 못 찾는 일도 방지됩니다)
+    found_targets = detect_target_object(full_review)
 
-        # 이 조각이 어떤 물건인지 확인
-        targets = detect_target_object(segment)  # 리스트 반환 (예: ['couch'])
+    sub_reviews = []
 
-        if targets:
-            for target in targets:
-                # 조각 정보를 담음 (예: 소파에 대한 칭찬)
-                sub_reviews.append({"target": target, "segment_text": segment})
+    # 4. 찾은 모든 가구에 대해 '전체 문장의 감정'을 적용합니다.
+    for target in found_targets:
+        sub_reviews.append(
+            {
+                "target": target,
+                "segment_text": full_review,  # 부분 문장이 아닌 전체 문장을 연결
+                "emoji": main_emoji,  # 전체 문장의 감정 이모티콘
+            }
+        )
 
-    # 3. DB에는 "하나의 리뷰"로 저장하되, 세부 정보를 안에 포함시킴
+    # 5. DB 저장
     new_review = {
         "name": user_name,
         "rating": rating,
-        "text": full_review,  # 메인 화면용 전체 문장
-        "sub_reviews": sub_reviews,  # 파노라마용 세부 조각 리스트
+        "text": full_review,  # 원본 전체 글
+        "sub_reviews": sub_reviews,
+        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
     }
 
+    # 최신 리뷰가 위로 오도록 저장
     db_reviews.insert(0, new_review)
-
     return redirect(url_for("index"))
 
 
@@ -148,4 +258,4 @@ def api_reviews():
 
 
 if __name__ == "__main__":
-    app.run(debug=False, port=5000)
+    app.run(debug=True, port=5000)
