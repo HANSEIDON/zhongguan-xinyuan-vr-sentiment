@@ -22,4 +22,5 @@ runs/
 *.sqlite
 .flaskenv
 
+# macOS 디렉토리 파일
 .DS_Store
