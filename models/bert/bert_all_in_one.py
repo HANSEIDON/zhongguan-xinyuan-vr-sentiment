@@ -25,7 +25,7 @@ from itertools import cycle
 class Config:
     # !!!파일 경로 수정해야함!!!!!
     TRAIN_FILE = str(settings.DATA_HOME / "train/usual_train.txt")
-    EVAL_FILE  = str(settings.DATA_HOME / "eval/usual_eval_labeled.txt")
+    EVAL_FILE = str(settings.DATA_HOME / "eval/usual_eval_labeled.txt")
 
     # 모델 및 학습 설정
     MODEL_NAME = "bert-base-chinese"
