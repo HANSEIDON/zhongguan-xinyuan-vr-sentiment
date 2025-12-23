@@ -1,3 +1,5 @@
+import settings
+
 import json
 from tqdm import trange
 from harvesttext import HarvestText
@@ -54,10 +56,10 @@ def clean_text(file, save_dir):
 
 
 clean_text(
-    "C:/baidunetdiskdownload/data_set/data_set1/eval_data/usual_eval_labeled.txt",
-    "C:/baidunetdiskdownload/data_set/data_set1/data_set1/eval_data/",
+    settings.DATA_HOME / "eval" / "usual_eval_labeled.txt",
+    settings.DATA_HOME / "cleaned" / "eval",
 )
 clean_text(
-    "C:/baidunetdiskdownload/data_set/data_set1/eval_data/virus_eval_labeled.txt",
-    "C:/baidunetdiskdownload/data_set/data_set1/data_set1/eval_data/",
+    settings.DATA_HOME / "eval" / "virus_eval_labeled.txt",
+    settings.DATA_HOME / "cleaned" / "eval",
 )

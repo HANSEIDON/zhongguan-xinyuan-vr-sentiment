@@ -1,3 +1,5 @@
+import settings
+
 import os
 import json
 import re
@@ -22,8 +24,8 @@ from itertools import cycle
 # ==========================================
 class Config:
     # !!!파일 경로 수정해야함!!!!!
-    TRAIN_FILE = "./usual_train.txt"
-    EVAL_FILE = "./usual_eval_labeled.txt"
+    TRAIN_FILE = str(settings.DATA_HOME / "train/usual_train.txt")
+    EVAL_FILE  = str(settings.DATA_HOME / "eval/usual_eval_labeled.txt")
 
     # 모델 및 학습 설정
     MODEL_NAME = "bert-base-chinese"
@@ -35,7 +37,7 @@ class Config:
 
     # 장치 설정 (GPU 우선 사용)
     DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    SAVE_PATH = "best.pt"  # 최고 성능 모델 저장 파일명
+    SAVE_PREFIX = settings.MODEL_HOME / "bert"  # 최고 성능 모델 저장 파일명
 
 
 config = Config()
@@ -240,7 +242,7 @@ def plot_learning_curve(history):
     plt.grid(True)
 
     plt.tight_layout()
-    plt.savefig("learning_curve.png")
+    plt.savefig(config.SAVE_PREFIX / "learning_curve.png")
     print("📈 학습 곡선 저장 완료: learning_curve.png")
 
 
@@ -261,7 +263,7 @@ def plot_confusion_matrix_custom(y_true, y_pred, id2label):
     plt.xlabel("Predicted")
     plt.ylabel("True")
     plt.title("Confusion Matrix (BERT)")
-    plt.savefig("confusion_matrix.png")
+    plt.savefig(config.SAVE_PREFIX / "confusion_matrix.png")
     print("🔥 혼동 행렬 저장 완료: confusion_matrix.png")
 
 
@@ -298,7 +300,7 @@ def plot_multiclass_roc(y_true, y_probs, num_classes, id2label):
     plt.title("Multi-class ROC Curve")
     plt.legend(loc="lower right")
     plt.grid(True)
-    plt.savefig("roc_curve.png")
+    plt.savefig(config.SAVE_PREFIX / "roc_curve.png")
     print(" ROC 곡선 저장 완료: roc_curve.png")
 
 
@@ -361,7 +363,7 @@ if __name__ == "__main__":
         # 최고 기록 갱신 시 저장
         if f1 > best_f1:
             best_f1 = f1
-            torch.save(model.state_dict(), config.SAVE_PATH)
+            torch.save(model.state_dict(), config.SAVE_PREFIX / "best.pt")
             print(f"💾 Best Model Saved! (F1: {best_f1:.4f})")
 
         print("-" * 30)
@@ -378,7 +380,7 @@ if __name__ == "__main__":
 
     # (2) 베스트 모델 로드 (학습된 가중치 불러오기)
     print("Loading best model for analysis...")
-    model.load_state_dict(torch.load(config.SAVE_PATH))
+    model.load_state_dict(torch.load(config.SAVE_PREFIX / "best.pt"))
     model.to(config.DEVICE)
 
     # (3) 예측 데이터 추출

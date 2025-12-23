@@ -1,9 +1,11 @@
+import settings
+
 import json
 from collections import Counter
 
 
 # 1. 파일 경로 설정 (파일이 있는 경로로 수정하세요)
-file_path = "./usual_train.txt"
+file_path = str(settings.DATA_HOME / "train/usual_train.txt")
 
 # 2. 데이터 불러오기
 with open(file_path, "r", encoding="utf-8") as f:

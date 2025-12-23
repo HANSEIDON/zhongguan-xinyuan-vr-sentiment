@@ -1,3 +1,5 @@
+import settings
+
 import torch
 from torch.utils.data import DataLoader
 from transformers import BertForSequenceClassification
@@ -45,7 +47,7 @@ def main():
     )
 
     # 6. [핵심] 저장된 'best.pt' 가중치 불러오기
-    model_path = "./best.pt"  # 파일 경로 확인!
+    model_path = str(settings.MODEL_HOME / "bert/best.pt")  # 파일 경로 확인!
     print(f"💾 Loading Weights from {model_path}...")
 
     # 만약 GPU에서 학습하고 CPU에서 돌린다면 map_location이 필요할 수 있음
