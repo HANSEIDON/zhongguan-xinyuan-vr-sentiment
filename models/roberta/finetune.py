@@ -1,3 +1,5 @@
+import settings
+
 import os
 import json
 import torch
@@ -280,13 +282,13 @@ def parse_args():
     )
     parser.add_argument(
         "--train_data_path",
-        default=base_dir + "data_set/train/usual_train.txt",
+        default=str(settings.DATA_HOME / "train/usual_train.txt"),
         type=str,
         help="train data path",
     )
     parser.add_argument(
         "--val_data_path",
-        default=base_dir + "data_set/eval_data/usual_eval_labeled.txt",
+        default=str(settings.DATA_HOME / "eval/usual_eval_labeled.txt"),
         type=str,
         help="train data path",
     )

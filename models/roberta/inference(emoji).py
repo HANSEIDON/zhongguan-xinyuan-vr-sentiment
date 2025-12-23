@@ -1,3 +1,5 @@
+import settings
+
 import torch
 import argparse
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
@@ -17,7 +19,7 @@ def parse_args():
     )
     parser.add_argument(
         "--model_path",
-        default="/content/drive/MyDrive/workspace/wb/best.pt",
+        default=settings.MODEL_HOME / "roberta/best.py",
         type=str,
         help="model checkpoint path",
     )
