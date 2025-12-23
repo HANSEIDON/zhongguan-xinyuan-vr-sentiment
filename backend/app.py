@@ -1,3 +1,5 @@
+import settings
+
 from flask import Flask, render_template, request, redirect, url_for, jsonify
 import os
 from datetime import datetime
@@ -47,17 +49,19 @@ def get_nickname(ip_address):
 # ----------------------------------------------------
 print("Loading AI Model...")
 
-MODEL_NAME = "hfl/chinese-roberta-wwm-ext"
-MODEL_PATH = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)), "models", "best.pt"
-)
 device = torch.device("cpu")
 
 try:
-    tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
-    model = AutoModelForSequenceClassification.from_pretrained(MODEL_NAME, num_labels=6)
+    tokenizer = AutoTokenizer.from_pretrained(settings.USE_PRETRAINED)
+    model = AutoModelForSequenceClassification.from_pretrained(
+        settings.USE_PRETRAINED, num_labels=6
+    )
 
-    checkpoint = torch.load(MODEL_PATH, map_location=device, weights_only=False)
+    checkpoint = torch.load(
+        settings.MODEL_HOME / settings.USE_LOCAL_MODEL / settings.USE_PT_NAME,
+        map_location=device,
+        weights_only=False,
+    )
     state_dict = checkpoint.get("state_dict", checkpoint)
     model.load_state_dict(state_dict, strict=False)
     model.to(device)
@@ -111,7 +115,8 @@ def analyze_sentiment(text):
         label_text = label_map[pred_id]
         emoji = emoji_map[label_text]
         return emoji, label_text
-    except:
+    except Exception as exc:
+        print(f"error while analyzing sentiment: {exc}")
         return "", "neutral"
 
 
