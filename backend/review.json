@@ -1,0 +1,46 @@
+[
+    {
+        "name": "Alice",
+        "rating": 1,
+        "text": "半地下室太漏气了",
+        "sub_reviews":
+        [],
+        "timestamp": "2025-12-23 14:19:11"
+    },
+    {
+        "name": "Alice",
+        "rating": 2,
+        "text": "房间太小了",
+        "sub_reviews":
+        [],
+        "timestamp": "2025-12-23 14:18:52"
+    },
+    {
+        "name": "Alice",
+        "rating": 4,
+        "text": "床很松软 很好",
+        "sub_reviews":
+        [
+            {
+                "target": "bed",
+                "segment_text": "床很松软 很好",
+                "emoji": "😊"
+            }
+        ],
+        "timestamp": "2025-12-23 14:18:38"
+    },
+    {
+        "name": "Alice",
+        "rating": 2,
+        "text": "椅子和照片不一样",
+        "sub_reviews":
+        [
+            {
+                "target": "chair",
+                "segment_text": "椅子和照片不一样",
+                "emoji": "😐"
+            }
+        ],
+        "timestamp": "2025-12-23 14:18:00"
+    }
+]

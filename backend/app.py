@@ -1,7 +1,7 @@
 import settings
 
+import json
 from flask import Flask, render_template, request, redirect, url_for, jsonify
-import os
 from datetime import datetime
 
 # AI 관련 라이브러리
@@ -9,9 +9,9 @@ import torch
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
 app = Flask(__name__)
-app.template_folder = os.path.dirname(os.path.abspath(__file__))
+app.template_folder = settings.BACKEND_HOME / "templates"
+app.static_folder = settings.BACKEND_HOME / "static"
 app.static_url_path = "/static"
-app.static_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
 
 # ----------------------------------------------------
 # [설정] 사용자 이름 매핑 (IP -> 별명)
@@ -77,7 +77,7 @@ except Exception as e:
 # ----------------------------------------------------
 def analyze_sentiment(text):
     if model is None:
-        return "", "neutral"
+        return "😐", "neutral"
 
     try:
         encoded = tokenizer(
@@ -109,7 +109,7 @@ def analyze_sentiment(text):
             "sad": "😢",
             "fear": "😱",
             "surprise": "😧",
-            "neutral": "",
+            "neutral": "😐",
         }
 
         label_text = label_map[pred_id]
@@ -117,7 +117,7 @@ def analyze_sentiment(text):
         return emoji, label_text
     except Exception as exc:
         print(f"error while analyzing sentiment: {exc}")
-        return "", "neutral"
+        return "😐", "neutral"
 
 
 # ----------------------------------------------------
@@ -197,8 +197,25 @@ def detect_target_object(text):
     return found_targets
 
 
-# 임시 DB (서버 재시작 시 초기화됨)
-db_reviews = []
+# 임시 반영구 DB (비효율)
+class ReviewDB:
+    def __init__(self, load=str(settings.BACKEND_HOME / "review.json")):
+        self._load = load
+        with open(self._load, "r") as j:
+            self._reviews = json.load(j)
+
+    def save(self):
+        with open(self._load, "w") as j:
+            j.write(json.dumps(self._reviews))
+
+    def new(self, review):
+        self._reviews.insert(0, review)
+        self.save()
+
+    def get(self) -> list[dict]:
+        return self._reviews
+
+json_db = ReviewDB()
 
 
 @app.route("/")
@@ -253,14 +270,14 @@ def submit_review():
     }
 
     # 최신 리뷰가 위로 오도록 저장
-    db_reviews.insert(0, new_review)
+    json_db.new(new_review)
     return redirect(url_for("index"))
 
 
 @app.route("/api/reviews", methods=["GET"])
 def api_reviews():
-    return jsonify(db_reviews)
+    return jsonify(json_db.get())
 
 
 if __name__ == "__main__":
-    app.run(debug=True, port=5000)
+    app.run(debug=False, port=5000)
