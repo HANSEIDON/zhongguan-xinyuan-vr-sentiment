@@ -240,32 +240,28 @@ def submit_review():
     user_ip = request.remote_addr
     user_name = get_nickname(user_ip)
 
-    # 2. 감정 분석: 문장을 쪼개지 않고 '통째로' 분석합니다.
-    # 이렇게 해야 "床垫简直是yyds!" 처럼 문맥이 필요한 문장을 정확히 인식합니다.
+    # 2. 감정 분석 (전체 문장 기준)
     main_emoji, _ = analyze_sentiment(full_review)
 
-    # 3. 사물 인식: 전체 텍스트에서 언급된 모든 가구를 찾습니다.
-    # (re.split을 쓰지 않으므로 문장이 잘려서 가구를 못 찾는 일도 방지됩니다)
+    # 3. 사물 인식
     found_targets = detect_target_object(full_review)
 
     sub_reviews = []
 
-    # 4. 찾은 모든 가구에 대해 '전체 문장의 감정'을 적용합니다.
+    # 4. 가구별 리뷰 데이터 생성
     for target in found_targets:
         sub_reviews.append(
-            {
-                "target": target,
-                "segment_text": full_review,  # 부분 문장이 아닌 전체 문장을 연결
-                "emoji": main_emoji,  # 전체 문장의 감정 이모티콘
-            }
+            {"target": target, "segment_text": full_review, "emoji": main_emoji}
         )
 
     # 5. DB 저장
     new_review = {
         "name": user_name,
         "rating": rating,
-        "text": full_review,  # 원본 전체 글
+        "text": full_review,
         "sub_reviews": sub_reviews,
+        # ★ [수정됨] 전체 감정 이모티콘을 별도로 저장 (기타 리뷰 표시용)
+        "main_emoji": main_emoji,
         "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
     }
 

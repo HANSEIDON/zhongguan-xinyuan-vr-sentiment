@@ -22,8 +22,13 @@
         </div>
 
         <div id="all-reviews-section">
-            <h3>检测到的物体与评价</h3>
+            <h3 style="margin-bottom: 10px; color: #333;">📍 家具评价</h3>
             <div id="review-list"></div>
+
+            <hr style="border: 0; border-top: 1px dashed #ccc; margin: 20px 0;">
+
+            <h3 style="margin-bottom: 10px; color: #333;">📋 其他 / 整体评价</h3>
+            <div id="general-review-list"></div>
         </div>
     </div>
 
@@ -33,7 +38,7 @@
 
         Promise.all([
             fetch('/static/data.json?t=' + new Date().getTime()).then(r => r.json()),
-            fetch('/api/reviews').then(r => r.json())
+            fetch('/api/reviews?t=' + new Date().getTime()).then(r => r.json())
         ]).then(([pData, rData]) => {
             panoramaData = pData;
             reviewData = rData;
@@ -42,7 +47,7 @@
             renderSidebarList(); 
         });
 
-        // 1. 파노라마 핫스팟용 통계 계산
+        // 1. 통계 계산
         function getEmotionStats(targetName) {
             let counts = {};
             let total = 0;
@@ -73,7 +78,7 @@
             return `${statsString}\n(共${total}条)`;
         }
 
-        // 2. 파노라마 뷰어 초기화
+        // 2. 파노라마 초기화
         function initPanorama() {
             const processedHotspots = panoramaData.hotSpots.map(spot => {
                 const objectName = spot.text.split(' ')[0].toLowerCase();
@@ -92,72 +97,115 @@
             });
         }
 
-        // 3. 사이드바 목록 그리기 (★ 수정됨: 이모티콘 다시 붙이기)
+        // 3. 사이드바 목록 그리기
         function renderSidebarList() {
-            const listContainer = document.getElementById('review-list');
-            let html = '';
+            const furnitureContainer = document.getElementById('review-list');
+            const generalContainer = document.getElementById('general-review-list');
             
+            let furnitureHtml = '';
+            let generalHtml = '';
+            let displayedReviewIndices = new Set();
+
+            // [Part 1] 가구별 리뷰 렌더링
             if (!panoramaData.hotSpots || panoramaData.hotSpots.length === 0) {
-                listContainer.innerHTML = '<div style="padding:10px;">未检测到物体</div>';
-                return;
+                furnitureContainer.innerHTML = '<div style="padding:10px; color:#666;">未检测到家具</div>';
+            } else {
+                panoramaData.hotSpots.forEach((spot, index) => {
+                    const objectName = spot.text.split(' ')[0].toLowerCase(); 
+                    const displayName = objectName.toUpperCase(); 
+                    let matchedSubReviews = [];
+
+                    reviewData.forEach((review, rIndex) => {
+                        let targetSub = null;
+                        if (review.sub_reviews) {
+                            targetSub = review.sub_reviews.find(sub => sub.target === objectName);
+                        }
+
+                        if (targetSub) {
+                            matchedSubReviews.push({
+                                name: review.name,
+                                rating: review.rating,
+                                text: review.text,
+                                emoji: targetSub.emoji
+                            });
+                            displayedReviewIndices.add(rIndex);
+                        }
+                    });
+
+                    furnitureHtml += `
+                        <div class="furniture-card" onclick="jumpToHotspot(${spot.pitch}, ${spot.yaw})">
+                            <div class="furniture-header">
+                                <strong>${displayName} #${index + 1}</strong>
+                                <span style="font-size:0.8em; color:#666;">
+                                    📍 ${matchedSubReviews.length > 0 ? matchedSubReviews.length + '条评论' : '点击定位'}
+                                </span>
+                            </div>
+                    `;
+
+                    if (matchedSubReviews.length > 0) {
+                        matchedSubReviews.forEach(r => {
+                            furnitureHtml += createReviewItemHtml(r);
+                        });
+                    } else {
+                        furnitureHtml += `<div class="review-sub-item" style="color:#999; font-style:italic;">暂无评价</div>`;
+                    }
+                    furnitureHtml += `</div>`; 
+                });
+                furnitureContainer.innerHTML = furnitureHtml;
             }
 
-            panoramaData.hotSpots.forEach((spot, index) => {
-                const objectName = spot.text.split(' ')[0].toLowerCase(); 
-                const displayName = objectName.toUpperCase(); 
+            // [Part 2] 기타/전체 리뷰 렌더링 (수정됨)
+            let unmatchedReviews = reviewData.filter((_, index) => !displayedReviewIndices.has(index));
 
-                let matchedSubReviews = [];
+            if (unmatchedReviews.length > 0) {
+                unmatchedReviews.forEach(r => {
+                    // ★ 여기가 핵심입니다!
+                    // 이전 코드: r.sub_reviews 안에서만 찾음 -> 없으면 꽝
+                    // 수정 코드: r.main_emoji(서버가 저장한 전체감정)를 우선적으로 사용
+                    
+                    let displayEmoji = r.main_emoji; // 1순위: 전체 감정
 
-                reviewData.forEach(review => {
-                    // 이 리뷰 안에 해당 가구(objectName)에 대한 분석 결과가 있는지 찾음
-                    let targetSub = null;
-                    if (review.sub_reviews) {
-                        targetSub = review.sub_reviews.find(sub => sub.target === objectName);
+                    // 만약 예전 데이터라 main_emoji가 없으면 2순위로 sub_reviews 확인
+                    if (!displayEmoji && r.sub_reviews && r.sub_reviews.length > 0) {
+                        displayEmoji = r.sub_reviews[0].emoji;
                     }
 
-                    if (targetSub) {
-                        matchedSubReviews.push({
-                            name: review.name,
-                            rating: review.rating,
-                            text: review.text,      // 원본 전체 글
-                            emoji: targetSub.emoji  // ★ 분석된 이모티콘을 여기서 가져옴!
-                        });
-                    }
-                });
+                    // 그래도 없으면 빈칸
+                    if (!displayEmoji) displayEmoji = '';
 
-                html += `
-                    <div class="furniture-card" onclick="jumpToHotspot(${spot.pitch}, ${spot.yaw})">
-                        <div class="furniture-header">
-                            <strong>${displayName} #${index + 1}</strong>
-                            <span style="font-size:0.8em; color:#666;">
-                                📍 ${matchedSubReviews.length > 0 ? matchedSubReviews.length + '条评论' : '点击定位'}
-                            </span>
+                    generalHtml += `
+                        <div class="furniture-card" style="cursor: default; border-left: 4px solid #aaa;"> 
+                            ${createReviewItemHtml({
+                                name: r.name,
+                                rating: r.rating,
+                                text: r.text,
+                                emoji: displayEmoji // 찾아낸 이모티콘 적용
+                            })}
                         </div>
-                `;
+                    `;
+                });
+            } else {
+                generalHtml = '<div style="padding:10px; color:#999; font-style:italic;">没有其他评论</div>';
+            }
 
-                if (matchedSubReviews.length > 0) {
-                    matchedSubReviews.forEach(r => {
-                        html += `
-                            <div class="review-sub-item">
-                                <div style="display:flex; justify-content:space-between; margin-bottom:2px;">
-                                    <span style="font-weight:bold; color:#007bff; font-size:0.85em;">
-                                        ${r.name}
-                                    </span>
-                                    <span style="color:gold; font-size:0.8em;">${'⭐'.repeat(r.rating)}</span>
-                                </div>
-                                <div style="color:#333; font-size:0.9em; line-height:1.4;">
-                                    ${r.text} <span style="font-size:1.2em;">${r.emoji || ''}</span> </div>
-                            </div>
-                        `;
-                    });
-                } else {
-                    html += `<div class="review-sub-item" style="color:#999; font-style:italic;">暂无评价</div>`;
-                }
+            generalContainer.innerHTML = generalHtml;
+        }
 
-                html += `</div>`; 
-            });
-
-            listContainer.innerHTML = html;
+        // HTML 생성 헬퍼
+        function createReviewItemHtml(r) {
+            return `
+                <div class="review-sub-item">
+                    <div style="display:flex; justify-content:space-between; margin-bottom:2px;">
+                        <span style="font-weight:bold; color:#007bff; font-size:0.85em;">
+                            ${r.name}
+                        </span>
+                        <span style="color:gold; font-size:0.8em;">${'⭐'.repeat(r.rating)}</span>
+                    </div>
+                    <div style="color:#333; font-size:0.9em; line-height:1.4;">
+                        ${r.text} <span style="font-size:1.2em;">${r.emoji || ''}</span>
+                    </div>
+                </div>
+            `;
         }
 
         function jumpToHotspot(pitch, yaw) {
