@@ -3,15 +3,12 @@ import settings
 import json
 from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for, jsonify
-from flask_cors import CORS
 
 # AI 관련 라이브러리
 import torch
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
 app = Flask(__name__)
-CORS(app)
-
 app.template_folder = settings.BACKEND_HOME / "templates"
 app.static_folder = settings.BACKEND_HOME / "static"
 app.static_url_path = "/static"
@@ -284,4 +281,4 @@ def api_reviews():
 
 
 if __name__ == "__main__":
-    app.run(debug=False, host="0.0.0.0", port=9000)
+    app.run(debug=True, host="0.0.0.0", port=9000)
