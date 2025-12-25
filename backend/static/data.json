@@ -1,6 +1,7 @@
 {
     "panorama_image": "/static/room.png",
-    "hotSpots": [
+    "hotSpots":
+    [
         {
             "pitch": -51.83448791503906,
             "yaw": -155.86057157532036,
