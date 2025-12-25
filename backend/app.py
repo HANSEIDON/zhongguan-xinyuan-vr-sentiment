@@ -201,18 +201,23 @@ def detect_target_object(text):
 class ReviewDB:
     def __init__(self, load=str(settings.BACKEND_HOME / "review.json")):
         self._load = load
+
+    def load(self):
         with open(self._load, "r") as j:
             self._reviews = json.load(j)
 
     def save(self):
+        self.load()
         with open(self._load, "w") as j:
             j.write(json.dumps(self._reviews))
 
     def new(self, review):
+        self.load()
         self._reviews.insert(0, review)
         self.save()
 
     def get(self) -> list[dict]:
+        self.load()
         return self._reviews
 
 json_db = ReviewDB()
