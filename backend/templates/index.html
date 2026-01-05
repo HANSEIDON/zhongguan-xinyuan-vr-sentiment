@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>北京大学中关新园 - 探索评价</title>
+    <link rel="stylesheet" href="/static/default.css">
+    <link rel="stylesheet" href="/static/custom.css">
+  </head>
+  <body>
+    <div class="navbar">
+      <div class="container navbar-content">
+        <div class="navbar-logo">北京大学中关新园</div>
+        <div class="nav-links">
+          <a href="#main-banner">首页</a>
+          <a href="#">园区介绍</a>
+          <a href="#review-section">客户心声</a>
+          <a href="#">联系我们</a>
+        </div>
+      </div>
+    </div>
+    <header id="main-banner">
+      <div id="banner-overlay"></div>
+      <div id="banner-content">
+        <h1>在全景图中探索房间！</h1>
+        <p>2025全新设计, 持续升级！</p>
+        <a href="/panorama" class="btn-explore">立即了解 / 探索房间</a>
+      </div>
+    </header>
+    <section id="review-section">
+      <div class="container">
+        <h2>客户心声</h2>
+        <form id="review-form" class="review-input-area" action="/submit_review" method="POST">
+          <p>分享您在中关新园的居住体验...</p>
+          <textarea name="review_content" placeholder="输入您的评价..." required></textarea>
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>评分: <select name="rating" required>
+                <option value="5">⭐⭐⭐⭐⭐</option>
+                <option value="4">⭐⭐⭐⭐</option>
+                <option value="3">⭐⭐⭐</option>
+                <option value="2">⭐⭐</option>
+                <option value="1">⭐</option>
+              </select>
+            </div>
+            <button type="submit" class="submit-btn">提交评价</button>
+          </div>
+        </form>
+        <div class="filter-bar">
+          <h3 style="margin: 0; color:#333;">最新评论</h3>
+          <div>
+            <button onclick="sortReviews('latest')" class="sort-btn active">最新</button>
+            <button onclick="sortReviews('high')" class="sort-btn">好评</button>
+            <button onclick="sortReviews('low')" class="sort-btn">差评</button>
+          </div>
+        </div>
+        <div id="latest-reviews-grid" class="reviews-grid"></div>
+        <div style="text-align: center; margin-top: 30px;">
+          <button id="load-more-btn" onclick="toggleShowAll()" class="btn-explore" style="padding: 10px 30px; font-size: 1em; display: none;">查看更多</button>
+        </div>
+      </div>
+    </section>
+    <footer class="footer">
+      <div class="container">
+        <div class="footer-grid">
+          <div>
+            <h4>关于我们</h4>
+            <p>北京大学中关新园致力于为师生提供优越的居住环境，打造温馨舒适的学习交流空间。</p>
+          </div>
+          <div>
+            <!--
+                <h4>快捷链接</h4><ul><li><a href="#">园区介绍</a></li><li><a href="/panorama">房间探索</a></li><li><a href="#">新闻展示</a></li><li><a href="#">服务指南</a></li></ul>
+                -->
+          </div>
+          <div>
+            <h4>联系方式</h4>
+            <ul>
+              <li>
+                <i class="fas fa-map-marker-alt"></i> 北京市海淀区中关村北大街
+              </li>
+              <li>
+                <i class="fas fa-phone"></i> 185-0000-0000
+              </li>
+              <li>
+                <i class="fas fa-envelope"></i> 2100093000@stu.pku.edu.cn
+              </li>
+            </ul>
+          </div>
+        </div>
+        <div class="copyright">© 2025 HANSEIDON</div>
+      </div>
+    </footer>
+    <script>
+      let allReviews = [];
+      let isShowAll = false;
+
+      function getStars(rating) {
+        let stars = '';
+        for (let i = 0; i < 5; i++) {
+          stars += (i < rating) ? '⭐' : '☆';
+        }
+        return stars;
+      }
+      async function fetchAndDisplayReviews() {
+        try {
+          const response = await fetch('/api/reviews');
+          if (!response.ok) throw new Error('Network error');
+          allReviews = await response.json();
+          renderReviews();
+        } catch (error) {
+          console.error('Error:', error);
+        }
+      }
+
+      function renderReviews() {
+        const grid = document.getElementById('latest-reviews-grid');
+        let htmlContent = '';
+        // 더보기 상태에 따라 보여줄 개수 조절 (3개 or 전체)
+        const displayList = isShowAll ? allReviews : allReviews.slice(0, 3);
+        if (displayList.length === 0) {
+          htmlContent = ' < div class = "no-reviews-message" > 暂无评价 < /div>';
+        } else {
+          displayList.forEach(review => {
+            htmlContent += `
+                        
+                        <div class="review-card">
+                            <div class="name">${review.name}</div>
+                            <div class="stars">${getStars(review.rating)}</div>
+                            <div class="text">${review.text}</div>
+                        </div>
+                    `;
+          });
+        }
+        grid.innerHTML = htmlContent;
+        // 더보기 버튼 제어
+        const btn = document.getElementById('load-more-btn');
+        btn.innerText = isShowAll ? "收起" : "查看更多";
+        // 리뷰가 3개 이하면 버튼 숨김
+        if (allReviews.length <= 3) {
+          btn.style.display = 'none';
+        } else {
+          btn.style.display = 'inline-block';
+        }
+      }
+
+      function sortReviews(type) {
+        document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active'));
+        event.target.classList.add('active');
+        if (type === 'latest') {
+          fetchAndDisplayReviews(); // 최신순은 서버에서 다시 가져옴 (간편함)
+        } else if (type === 'high') {
+          allReviews.sort((a, b) => b.rating - a.rating);
+        } else if (type === 'low') {
+          allReviews.sort((a, b) => a.rating - b.rating);
+        }
+        renderReviews();
+      }
+
+      function toggleShowAll() {
+        isShowAll = !isShowAll;
+        renderReviews();
+      }
+      window.onload = fetchAndDisplayReviews;
+    </script>
+  </body>
+</html>

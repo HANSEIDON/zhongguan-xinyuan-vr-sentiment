@@ -1,0 +1,26 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[codz]
+*$py.class
+
+# Environments
+.env
+.envrc
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+### project-specific gitignores
+
+# YOLO 실행 결과 및 로그 파일
+runs/
+
+# Flask 세션 및 캐시 (서버 관련)
+*.sqlite
+.flaskenv
+
+# macOS 디렉토리 파일
+.DS_Store

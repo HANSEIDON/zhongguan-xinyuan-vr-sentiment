@@ -1,0 +1,24 @@
+{
+    "panorama_image": "/static/room.png",
+    "hotSpots":
+    [
+        {
+            "pitch": -51.83448791503906,
+            "yaw": -155.86057157532036,
+            "type": "info",
+            "text": "chair"
+        },
+        {
+            "pitch": -40.23975372314453,
+            "yaw": 45.91071831001031,
+            "type": "info",
+            "text": "bed"
+        },
+        {
+            "pitch": -5.0,
+            "yaw": 120.0,
+            "type": "info",
+            "text": "wardrobe"
+        }
+    ]
+}

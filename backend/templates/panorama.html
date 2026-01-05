@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>北京大学中关新园 - 房间探索</title>
+    <script type="text/javascript" src="/static/pannellum.js"></script>
+    <link rel="stylesheet" href="/static/pannellum.css" />
+    <link rel="stylesheet" href="/static/custom.css">
+    <link rel="stylesheet" href="/static/default.css">
+</head>
+<body>
+
+    <div id="panorama-viewer"></div>
+
+    <div id="review-sidebar">
+        <button id="toggle-btn" onclick="toggleSidebar()">&times;</button> 
+
+        <div id="sidebar-header">
+            <h1 class="site-title">房间全景探索</h1>
+            <div class="subtitle">点击评论可定位房间内物体</div>
+            <a href="/" class="btn-back">返回首页</a> 
+        </div>
+
+        <div id="all-reviews-section">
+            <h3 style="margin-bottom: 10px; color: #333;">📍 家具评价</h3>
+            <div id="review-list"></div>
+
+            <hr style="border: 0; border-top: 1px dashed #ccc; margin: 20px 0;">
+
+            <h3 style="margin-bottom: 10px; color: #333;">📋 其他 / 整体评价</h3>
+            <div id="general-review-list"></div>
+        </div>
+    </div>
+
+    <script>
+        let panoramaData = null; 
+        let reviewData = null;   
+
+        Promise.all([
+            fetch('/static/data.json?t=' + new Date().getTime()).then(r => r.json()),
+            fetch('/api/reviews?t=' + new Date().getTime()).then(r => r.json())
+        ]).then(([pData, rData]) => {
+            panoramaData = pData;
+            reviewData = rData;
+
+            initPanorama();      
+            renderSidebarList(); 
+        });
+
+        // 1. 통계 계산
+        function getEmotionStats(targetName) {
+            let counts = {};
+            let total = 0;
+
+            reviewData.forEach(review => {
+                if (review.sub_reviews) {
+                    review.sub_reviews.forEach(sub => {
+                        if (sub.target === targetName && sub.emoji) {
+                            let emo = sub.emoji;
+                            counts[emo] = (counts[emo] || 0) + 1;
+                            total++;
+                        }
+                    });
+                }
+            });
+
+            if (total === 0) return "暂无评价"; 
+
+            let sortedStats = Object.keys(counts).map(emo => {
+                return { emoji: emo, count: counts[emo] };
+            }).sort((a, b) => b.count - a.count);
+
+            let statsString = sortedStats.map(item => {
+                let percentage = Math.round((item.count / total) * 100);
+                return `${item.emoji} ${percentage}%`;
+            }).join("  ");
+
+            return `${statsString}\n(共${total}条)`;
+        }
+
+        // 2. 파노라마 초기화
+        function initPanorama() {
+            const processedHotspots = panoramaData.hotSpots.map(spot => {
+                const objectName = spot.text.split(' ')[0].toLowerCase();
+                const statsText = getEmotionStats(objectName);
+                const displayText = `${objectName.toUpperCase()}\n${statsText}`;
+                
+                return { ...spot, text: displayText };
+            });
+
+            window.panoramaViewer = pannellum.viewer('panorama-viewer', { 
+                "type": "equirectangular",
+                "panorama": panoramaData.panorama_image,
+                "autoLoad": true,
+                "hotSpots": processedHotspots,
+                "compass": true 
+            });
+        }
+
+        // 3. 사이드바 목록 그리기
+        function renderSidebarList() {
+            const furnitureContainer = document.getElementById('review-list');
+            const generalContainer = document.getElementById('general-review-list');
+            
+            let furnitureHtml = '';
+            let generalHtml = '';
+            let displayedReviewIndices = new Set();
+
+            // [Part 1] 가구별 리뷰 렌더링
+            if (!panoramaData.hotSpots || panoramaData.hotSpots.length === 0) {
+                furnitureContainer.innerHTML = '<div style="padding:10px; color:#666;">未检测到家具</div>';
+            } else {
+                panoramaData.hotSpots.forEach((spot, index) => {
+                    const objectName = spot.text.split(' ')[0].toLowerCase(); 
+                    const displayName = objectName.toUpperCase(); 
+                    let matchedSubReviews = [];
+
+                    reviewData.forEach((review, rIndex) => {
+                        let targetSub = null;
+                        if (review.sub_reviews) {
+                            targetSub = review.sub_reviews.find(sub => sub.target === objectName);
+                        }
+
+                        if (targetSub) {
+                            matchedSubReviews.push({
+                                name: review.name,
+                                rating: review.rating,
+                                text: review.text,
+                                emoji: targetSub.emoji
+                            });
+                            displayedReviewIndices.add(rIndex);
+                        }
+                    });
+
+                    furnitureHtml += `
+                        <div class="furniture-card" onclick="jumpToHotspot(${spot.pitch}, ${spot.yaw})">
+                            <div class="furniture-header">
+                                <strong>${displayName} #${index + 1}</strong>
+                                <span style="font-size:0.8em; color:#666;">
+                                    📍 ${matchedSubReviews.length > 0 ? matchedSubReviews.length + '条评论' : '点击定位'}
+                                </span>
+                            </div>
+                    `;
+
+                    if (matchedSubReviews.length > 0) {
+                        matchedSubReviews.forEach(r => {
+                            furnitureHtml += createReviewItemHtml(r);
+                        });
+                    } else {
+                        furnitureHtml += `<div class="review-sub-item" style="color:#999; font-style:italic;">暂无评价</div>`;
+                    }
+                    furnitureHtml += `</div>`; 
+                });
+                furnitureContainer.innerHTML = furnitureHtml;
+            }
+
+            // [Part 2] 기타/전체 리뷰 렌더링 (수정됨)
+            let unmatchedReviews = reviewData.filter((_, index) => !displayedReviewIndices.has(index));
+
+            if (unmatchedReviews.length > 0) {
+                unmatchedReviews.forEach(r => {
+                    // ★ 여기가 핵심입니다!
+                    // 이전 코드: r.sub_reviews 안에서만 찾음 -> 없으면 꽝
+                    // 수정 코드: r.main_emoji(서버가 저장한 전체감정)를 우선적으로 사용
+                    
+                    let displayEmoji = r.main_emoji; // 1순위: 전체 감정
+
+                    // 만약 예전 데이터라 main_emoji가 없으면 2순위로 sub_reviews 확인
+                    if (!displayEmoji && r.sub_reviews && r.sub_reviews.length > 0) {
+                        displayEmoji = r.sub_reviews[0].emoji;
+                    }
+
+                    // 그래도 없으면 빈칸
+                    if (!displayEmoji) displayEmoji = '';
+
+                    generalHtml += `
+                        <div class="furniture-card" style="cursor: default; border-left: 4px solid #aaa;"> 
+                            ${createReviewItemHtml({
+                                name: r.name,
+                                rating: r.rating,
+                                text: r.text,
+                                emoji: displayEmoji // 찾아낸 이모티콘 적용
+                            })}
+                        </div>
+                    `;
+                });
+            } else {
+                generalHtml = '<div style="padding:10px; color:#999; font-style:italic;">没有其他评论</div>';
+            }
+
+            generalContainer.innerHTML = generalHtml;
+        }
+
+        // HTML 생성 헬퍼
+        function createReviewItemHtml(r) {
+            return `
+                <div class="review-sub-item">
+                    <div style="display:flex; justify-content:space-between; margin-bottom:2px;">
+                        <span style="font-weight:bold; color:#007bff; font-size:0.85em;">
+                            ${r.name}
+                        </span>
+                        <span style="color:gold; font-size:0.8em;">${'⭐'.repeat(r.rating)}</span>
+                    </div>
+                    <div style="color:#333; font-size:0.9em; line-height:1.4;">
+                        ${r.text} <span style="font-size:1.2em;">${r.emoji || ''}</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        function jumpToHotspot(pitch, yaw) {
+            if (window.panoramaViewer) {
+                window.panoramaViewer.setPitch(pitch, 1000);
+                window.panoramaViewer.setYaw(yaw, 1000);
+            }
+        }
+        
+        function toggleSidebar() {
+            const sidebar = document.getElementById('review-sidebar');
+            const toggleBtn = document.getElementById('toggle-btn');
+            const isHidden = sidebar.classList.toggle('hidden');
+            
+            if (isHidden) {
+                toggleBtn.innerHTML = '&#9664;';
+                toggleBtn.style.left = '0';
+            } else {
+                toggleBtn.innerHTML = '&times;';
+                toggleBtn.style.left = '-40px';
+            }
+        }
+    </script>
+    
+    <style>
+        .furniture-card {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: box-shadow 0.2s;
+        }
+        .furniture-card:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            border-color: #007bff;
+        }
+        .furniture-header {
+            background: #f8f9fa;
+            padding: 10px 15px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .review-sub-item {
+            padding: 10px 15px;
+            border-bottom: 1px solid #f1f1f1;
+            font-size: 0.9em;
+        }
+        .review-sub-item:last-child {
+            border-bottom: none;
+        }
+    </style>
+</body>
+</html>
