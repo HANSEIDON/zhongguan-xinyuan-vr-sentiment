@@ -22,3 +22,12 @@ cd backend
 uv sync
 uv run app.py
 ```
+
+- with `pip`, on `Windows`
+```bash
+cd backend
+python -m venv .venv
+.venv\Scripts\python -m pip install torch==2.9.1+cpu --index-url https://download.pytorch.org/whl/cpu
+.venv\Scripts\python -m pip install flask==3.1.2 granian==2.6.0 hf-xet==1.2.0 opencv-python==4.12.0.88 transformers==4.57.3
+.venv\Scripts\python app.py
+```
